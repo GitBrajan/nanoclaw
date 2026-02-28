@@ -24,6 +24,7 @@ interface GroupState {
   containerName: string | null;
   groupFolder: string | null;
   retryCount: number;
+  killed: boolean;
 }
 
 export class GroupQueue {
@@ -47,6 +48,7 @@ export class GroupQueue {
         containerName: null,
         groupFolder: null,
         retryCount: 0,
+        killed: false,
       };
       this.groups.set(groupJid, state);
     }
@@ -200,22 +202,36 @@ export class GroupQueue {
     try {
       if (this.processMessagesFn) {
         const success = await this.processMessagesFn(groupJid);
-        if (success) {
+        if (state.killed) {
+          // User explicitly stopped this container — don't retry or drain
+          logger.info({ groupJid }, 'Container was stopped by user');
+        } else if (success) {
           state.retryCount = 0;
         } else {
           this.scheduleRetry(groupJid, state);
         }
       }
     } catch (err) {
-      logger.error({ groupJid, err }, 'Error processing messages for group');
-      this.scheduleRetry(groupJid, state);
+      if (!state.killed) {
+        logger.error({ groupJid, err }, 'Error processing messages for group');
+        this.scheduleRetry(groupJid, state);
+      } else {
+        logger.info({ groupJid }, 'Container was stopped by user');
+      }
     } finally {
+      const wasKilled = state.killed;
       state.active = false;
+      state.killed = false;
       state.process = null;
       state.containerName = null;
       state.groupFolder = null;
       this.activeCount--;
-      this.drainGroup(groupJid);
+      if (!wasKilled) {
+        this.drainGroup(groupJid);
+      } else {
+        // Still drain other waiting groups that need a slot
+        this.drainWaiting();
+      }
     }
   }
 
@@ -234,15 +250,25 @@ export class GroupQueue {
     try {
       await task.fn();
     } catch (err) {
-      logger.error({ groupJid, taskId: task.id, err }, 'Error running task');
+      if (!state.killed) {
+        logger.error({ groupJid, taskId: task.id, err }, 'Error running task');
+      } else {
+        logger.info({ groupJid, taskId: task.id }, 'Task container was stopped by user');
+      }
     } finally {
+      const wasKilled = state.killed;
       state.active = false;
+      state.killed = false;
       state.isTaskContainer = false;
       state.process = null;
       state.containerName = null;
       state.groupFolder = null;
       this.activeCount--;
-      this.drainGroup(groupJid);
+      if (!wasKilled) {
+        this.drainGroup(groupJid);
+      } else {
+        this.drainWaiting();
+      }
     }
   }
 
@@ -325,6 +351,9 @@ export class GroupQueue {
   killContainer(groupJid: string): boolean {
     const state = this.groups.get(groupJid);
     if (!state?.active || !state.process) return false;
+    state.killed = true;
+    state.pendingMessages = false;
+    state.pendingTasks = [];
     state.process.kill('SIGKILL');
     return true;
   }
