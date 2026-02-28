@@ -82,10 +82,16 @@ AskUserQuestion: Claude subscription (Pro/Max) vs Anthropic API key?
 **Subscription (any environment):**
 
 - **If IS_HEADLESS=false** (desktop / WSL with a browser): run `claude setup-token` in another terminal, copy the token, add `CLAUDE_CODE_OAUTH_TOKEN=<token>` to `.env`. Do NOT collect the token in chat.
-- **If IS_HEADLESS=true** (SSH session, e.g. Termius): the browser cannot open on the server, but the user can get the token from the machine they're SSHing *from*:
-  1. On their local machine (Mac, Windows, Linux desktop — wherever Termius is running), run `claude setup-token` in a local terminal.
-  2. Complete the browser login, then copy the printed `CLAUDE_CODE_OAUTH_TOKEN` value.
-  3. Add `CLAUDE_CODE_OAUTH_TOKEN=<token>` to `.env` on this server. Do NOT paste the token into chat.
+- **If IS_HEADLESS=true** (SSH session, e.g. Termius): the browser cannot open on the server. The user needs a machine that has both a browser and the Claude CLI to generate the token.
+  - **SSH client is a desktop/laptop:** run `claude setup-token` there in a local terminal — that machine has a browser. Copy the printed `CLAUDE_CODE_OAUTH_TOKEN`, then add it to `.env` on this server.
+  - **SSH client is a phone (e.g. Termius on iOS/Android):** the phone cannot run `claude setup-token`. Use their computer instead:
+    1. On their computer, install the Claude CLI if not already present: `npm install -g @anthropic-ai/claude-code`
+    2. Run `claude setup-token` on the computer — this opens a browser, they log in, and a token is printed.
+    3. Copy the `CLAUDE_CODE_OAUTH_TOKEN` value.
+    4. Get that token to the server via either:
+       - SSH from the computer to the server (using Tailscale IP: `ssh user@<tailscale-ip>`) and add it to `.env` directly, OR
+       - Switch to Termius on the phone and paste `echo 'CLAUDE_CODE_OAUTH_TOKEN=<token>' >> .env`
+  - Do NOT paste the token into chat.
 
 **API key:** Tell user to add `ANTHROPIC_API_KEY=<key>` to `.env`.
 
