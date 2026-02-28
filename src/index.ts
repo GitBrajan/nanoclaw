@@ -12,6 +12,7 @@ import {
   TELEGRAM_ONLY,
   TRIGGER_PATTERN,
 } from './config.js';
+import { GmailChannel } from './channels/gmail.js';
 import { WhatsAppChannel } from './channels/whatsapp.js';
 import { TelegramChannel } from './channels/telegram.js';
 import { cleanupOrphans, ensureContainerRuntimeRunning } from './container-runtime.js';
@@ -436,9 +437,20 @@ async function main(): Promise<void> {
   }
 
   if (TELEGRAM_BOT_TOKEN) {
-    const telegram = new TelegramChannel(TELEGRAM_BOT_TOKEN, channelOpts);
+    const telegram = new TelegramChannel(TELEGRAM_BOT_TOKEN, {
+      ...channelOpts,
+      onStop: (jid) => queue.killContainer(jid),
+    });
     channels.push(telegram);
     await telegram.connect();
+  }
+
+  const gmail = new GmailChannel(channelOpts);
+  channels.push(gmail);
+  try {
+    await gmail.connect();
+  } catch (err) {
+    logger.warn({ err }, 'Gmail channel failed to connect, continuing without it');
   }
 
   // Start subsystems (independently of connection handler)

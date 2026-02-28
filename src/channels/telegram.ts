@@ -13,6 +13,7 @@ export interface TelegramChannelOpts {
   onMessage: OnInboundMessage;
   onChatMetadata: OnChatMetadata;
   registeredGroups: () => Record<string, RegisteredGroup>;
+  onStop?: (chatJid: string) => boolean;
 }
 
 export class TelegramChannel implements Channel {
@@ -48,6 +49,13 @@ export class TelegramChannel implements Channel {
     // Command to check bot status
     this.bot.command('ping', (ctx) => {
       ctx.reply(`${ASSISTANT_NAME} is online.`);
+    });
+
+    // Command to stop the currently running agent
+    this.bot.command('stop', (ctx) => {
+      const chatJid = `tg:${ctx.chat.id}`;
+      const killed = this.opts.onStop?.(chatJid) ?? false;
+      ctx.reply(killed ? 'Stopped.' : 'Nothing is running.');
     });
 
     this.bot.on('message:text', async (ctx) => {

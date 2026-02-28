@@ -318,6 +318,17 @@ export class GroupQueue {
     }
   }
 
+  /**
+   * Immediately kill the active container for a group.
+   * Returns true if a container was running and was killed, false otherwise.
+   */
+  killContainer(groupJid: string): boolean {
+    const state = this.groups.get(groupJid);
+    if (!state?.active || !state.process) return false;
+    state.process.kill('SIGKILL');
+    return true;
+  }
+
   async shutdown(_gracePeriodMs: number): Promise<void> {
     this.shuttingDown = true;
 
