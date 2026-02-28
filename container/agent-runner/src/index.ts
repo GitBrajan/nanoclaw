@@ -16,8 +16,10 @@
 
 import fs from 'fs';
 import path from 'path';
-import { query, HookCallback, PreCompactHookInput, PreToolUseHookInput } from '@anthropic-ai/claude-agent-sdk';
+import { query, createSdkMcpServer, HookCallback, PreCompactHookInput, PreToolUseHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { fileURLToPath } from 'url';
+// @ts-ignore - Copied from .claude/skills/x-integration/
+import { createXTools } from './skills/x-integration/agent.js';
 
 interface ContainerInput {
   prompt: string;
@@ -432,7 +434,9 @@ async function runQuery(
         'TeamCreate', 'TeamDelete', 'SendMessage',
         'TodoWrite', 'ToolSearch', 'Skill',
         'NotebookEdit',
-        'mcp__nanoclaw__*'
+        'mcp__nanoclaw__*',
+        'mcp__gmail__*',
+        'x_post', 'x_like', 'x_reply', 'x_retweet', 'x_quote',
       ],
       env: sdkEnv,
       permissionMode: 'bypassPermissions',
@@ -448,6 +452,14 @@ async function runQuery(
             NANOCLAW_IS_MAIN: containerInput.isMain ? '1' : '0',
           },
         },
+        gmail: {
+          command: 'npx',
+          args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
+        },
+        x: createSdkMcpServer({
+          name: 'x',
+          tools: createXTools({ groupFolder: containerInput.groupFolder, isMain: containerInput.isMain }),
+        }),
       },
       hooks: {
         PreCompact: [{ hooks: [createPreCompactHook(containerInput.assistantName)] }],

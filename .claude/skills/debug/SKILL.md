@@ -175,6 +175,41 @@ mounts.push({
 
 If an MCP server fails to start, the agent may exit. Check the container logs for MCP initialization errors.
 
+### 7. Claude Authentication Token Conflict
+
+**Symptom:** Authentication keeps failing even after a successful `/login`, or Claude Code rejects a valid token.
+
+**Root cause A — token not loading in SSH sessions:**
+
+`CLAUDE_CODE_OAUTH_TOKEN` set in `~/.zshrc` won't be loaded in SSH login shells (Termius, etc.) because SSH sources `~/.zprofile`, not `~/.zshrc`. The variable is silently absent.
+
+**Fix:** Move the export to `~/.zshenv`, which is sourced for *all* zsh sessions including SSH login shells:
+
+```bash
+# Remove from ~/.zshrc, add to ~/.zshenv instead:
+echo 'export CLAUDE_CODE_OAUTH_TOKEN=<your-token>' >> ~/.zshenv
+# Then unset from current session and reload:
+unset CLAUDE_CODE_OAUTH_TOKEN
+source ~/.zshenv
+```
+
+**Root cause B — stale env var overriding a fresh token:**
+
+If `CLAUDE_CODE_OAUTH_TOKEN` is exported in the shell environment and the token is expired, running `/login` stores a fresh token in `~/.claude/` — but the shell env var takes precedence over stored credentials. The bad token wins.
+
+**Fix:** Remove the env var entirely and let Claude Code use its stored credentials:
+
+```bash
+# Remove from shell config (edit ~/.zshrc and/or ~/.zshenv)
+# Then clear from all live sessions:
+unset CLAUDE_CODE_OAUTH_TOKEN
+
+# Verify NanoClaw's .env uses the token directly (not via shell env):
+cat .env  # Should show: CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+```
+
+**For NanoClaw containers:** The token should only live in `.env` at the project root. Do not export it in shell config — the container sources it from the mounted env file, not from the host shell environment.
+
 ## Manual Container Testing
 
 ### Test the full agent flow:

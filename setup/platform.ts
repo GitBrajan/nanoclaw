@@ -34,7 +34,10 @@ export function isHeadless(): boolean {
   if (getPlatform() === 'linux') {
     return !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
   }
-  // macOS is never headless in practice (even SSH sessions can open URLs)
+  // macOS SSH sessions can't open a browser on the server
+  if (getPlatform() === 'macos') {
+    return !!(process.env.SSH_CONNECTION || process.env.SSH_CLIENT);
+  }
   return false;
 }
 
