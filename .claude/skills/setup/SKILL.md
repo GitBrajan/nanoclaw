@@ -77,6 +77,13 @@ Run `npx tsx setup/index.ts --step container -- --runtime <chosen>` and parse th
 
 If HAS_ENV=true from step 2, read `.env` and check for `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`. If present, confirm with user: keep or reconfigure?
 
+**If IS_HEADLESS=true (SSH session, e.g. Termius):** `/login` and `claude setup-token` both require a browser to complete the OAuth flow, which is not available over SSH. Skip the subscription option and go straight to API key, OR instruct the user to get a token on a machine with a browser:
+
+- **Recommended (headless):** API key — get one at https://console.anthropic.com/settings/keys, add `ANTHROPIC_API_KEY=<key>` to `.env`.
+- **Alternative (headless OAuth):** On a machine with a browser, run `claude setup-token`, copy the printed token, then add `CLAUDE_CODE_OAUTH_TOKEN=<token>` to `.env` on this server. Do NOT paste the token into chat.
+
+**If IS_HEADLESS=false (desktop or WSL with browser):**
+
 AskUserQuestion: Claude subscription (Pro/Max) vs Anthropic API key?
 
 **Subscription:** Tell user to run `claude setup-token` in another terminal, copy the token, add `CLAUDE_CODE_OAUTH_TOKEN=<token>` to `.env`. Do NOT collect the token in chat.
