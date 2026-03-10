@@ -48,7 +48,11 @@ Service management:
 launchctl load ~/Library/LaunchAgents/com.nanoclaw.plist
 launchctl unload ~/Library/LaunchAgents/com.nanoclaw.plist
 launchctl kickstart -k gui/$(id -u)/com.nanoclaw  # restart
+```
 
+IMPORTANT: Never start NanoClaw manually (`node dist/index.js`) while launchd is managing it — `KeepAlive: true` means launchd auto-restarts on exit, creating duplicate instances that both connect to Telegram and produce duplicate responses. Always use `launchctl kickstart -k` to restart, or `launchctl unload` first if you need a manual run.
+
+```bash
 # Linux (systemd)
 systemctl --user start nanoclaw
 systemctl --user stop nanoclaw

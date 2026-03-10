@@ -60,9 +60,11 @@ describe('ensureContainerRuntimeRunning', () => {
     expect(mockExecSync).toHaveBeenCalledTimes(1);
     expect(mockExecSync).toHaveBeenCalledWith(
       `${CONTAINER_RUNTIME_BIN} system status`,
-      { stdio: 'pipe' },
+      { stdio: 'pipe', timeout: 10000 },
     );
-    expect(logger.debug).toHaveBeenCalledWith('Container runtime already running');
+    expect(logger.debug).toHaveBeenCalledWith(
+      'Container runtime already running',
+    );
   });
 
   it('auto-starts when system status fails', () => {
